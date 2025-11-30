@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="taller1.grupo.vueadmin.system.mapper.SysRoleMapper">
+
+    <select id="getRoleByUserId" resultType="taller1.grupo.vueadmin.system.entity.SysRole">
+        select t1.* from sys_role t1 left join sys_role_user t2 on t1.id = t2.role_id
+        <where>
+            <if test="userId != null  ">
+                t2.user_id = #{userId}
+            </if>
+        </where>
+    </select>
+
+</mapper>

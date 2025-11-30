@@ -1,0 +1,5 @@
+spring:
+ # Configuracion actual
+  profiles:
+    active: dev
+

@@ -1,0 +1,36 @@
+server:
+  port: '8415'
+spring:
+  jpa:
+    database: postgresql
+    generate-ddl: true
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    hibernate:
+      ddl-auto: create-drop
+  datasource:
+    # platform: postgres
+    url: 'jdbc:postgresql://localhost:5432/taller12024'
+    username: postgres
+    password: celeron
+logging:
+  level:
+    org:
+      springframework:
+        boot:
+          autoconfigure: DEBUG
+  # Pide tiempo fuera
+  mvc:
+    async:
+      request-timeout: 5000ms
+
+#mybatis-plus
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

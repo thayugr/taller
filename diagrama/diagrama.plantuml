@@ -1,0 +1,228 @@
+@startuml
+skinparam shadowing false
+skinparam linetype ortho
+skinparam roundcorner 10
+hide circle
+title ERD – PUBLIC & ACADEMICO (con niveles)
+
+' =========================
+'   PUBLIC (resumen)
+' =========================
+entity "public.sys_user" as public_sys_user {
+  * id : bigint
+  --
+  email : varchar
+  username : varchar
+  password : varchar
+  enabled : boolean
+  nick_name : varchar
+  create_time : timestamp
+  update_time : timestamp
+}
+entity "public.sys_role" as public_sys_role {
+  * id : bigint
+  --
+  role_code : varchar
+  role_name : varchar
+  description : varchar
+  create_time : timestamp
+  update_time : timestamp
+}
+entity "public.sys_menu" as public_sys_menu {
+  * id : bigint
+  --
+  parent_id : bigint
+  name : varchar
+  path : varchar
+  component : varchar
+  icon : varchar
+  sort : int
+  permission : varchar
+  create_time : timestamp
+  update_time : timestamp
+}
+entity "public.sys_role_user" as public_sys_role_user {
+  * id : bigint
+  --
+  + user_id : bigint
+  + role_id : bigint
+  create_time : timestamp
+  update_time : timestamp
+}
+entity "public.sys_role_menu" as public_sys_role_menu {
+  * id : bigint
+  --
+  + role_id : bigint
+  + menu_id : bigint
+  create_time : timestamp
+  update_time : timestamp
+}
+
+' =========================
+'   ACADEMICO – Catálogos
+' =========================
+entity "academico.niveles" as academico_niveles {
+  * codn : int
+  --
+  nombre : varchar(10)
+  estado : int
+}
+
+entity "academico.materia" as academico_materia {
+  * codmat : varchar(15)
+  --
+  nombre : varchar(30)
+  + codn : int
+  estado : int
+}
+
+entity "academico.paralelo" as academico_paralelo {
+  * codp : int
+  --
+  nombre : varchar
+  estado : int
+}
+
+entity "academico.items" as academico_items {
+  * codi : int
+  --
+  nombre : varchar
+  estado : int
+}
+
+entity "academico.modalidad" as academico_modalidad {
+  * codm : int
+  --
+  nombre : varchar
+  estado : int
+}
+
+entity "academico.dmodalidad" as academico_dmodalidad {
+  * coddm : int
+  --
+  + codm : int
+  nombre : varchar
+  estado : int
+}
+
+' =========================
+'   ACADEMICO – Oferta/Programa
+' =========================
+entity "academico.mapa" as academico_mapa {
+  * codmat : varchar
+  * codpar : int
+  * gestion : int
+  --
+  estado : int
+}
+
+entity "academico.progra" as academico_progra {
+  * codpar : int
+  * codp   : int
+  * codmat : varchar
+  * gestion: int
+  --
+  + ids : bigint
+}
+
+entity "academico.dicta" as academico_dicta {
+  * codpar : int
+  * codp   : int
+  * codmat : varchar
+  * gestion: int
+  * ids    : bigint
+}
+
+' =========================
+'   ACADEMICO – Personas/Metadatos
+' =========================
+entity "academico.personal" as academico_personal {
+  * idusuario : bigint
+  --
+  nombre : varchar
+  ap : varchar
+  am : varchar
+  estado : int
+  fnac : date
+  ecivil : varchar
+  genero : varchar
+  dir : varchar
+  telf : varchar
+  tipo : varchar
+  foto : varchar
+  create_time : timestamp
+  update_time : timestamp
+}
+
+entity "academico.datos" as academico_datos {
+  * cod : bigint
+  --
+  cedula : bigint
+}
+
+entity "academico.general" as academico_general {
+  * ids : bigint
+  --
+  gestion : int
+  create_time : timestamp
+  update_time : timestamp
+}
+
+' =========================
+'   ACADEMICO – Evaluación
+' =========================
+entity "academico.itemat" as academico_itemat {
+  * codmat : varchar
+  * codi   : int
+  * gestion: int
+  --
+  ponderacion : int
+  estado : int
+}
+
+entity "academico.notas" as academico_notas {
+  * codmat   : varchar
+  * codi     : int
+  * coda     : int
+  * codp     : int
+  * gestion  : int
+  * idusuario: bigint
+  --
+  + coddm : int
+  nota : numeric
+}
+
+' =========================
+'   RELACIONES
+' =========================
+' PUBLIC
+public_sys_user ||--o{ public_sys_role_user : user_id
+public_sys_role ||--o{ public_sys_role_user : role_id
+public_sys_role ||--o{ public_sys_role_menu : role_id
+public_sys_menu ||--o{ public_sys_role_menu : menu_id
+public_sys_menu ||--o{ public_sys_menu      : parent_id
+
+' ACADEMICO catálogos
+academico_niveles ||--o{ academico_materia : codn
+academico_modalidad ||--o{ academico_dmodalidad : codm
+academico_materia ||--o{ academico_mapa : codmat
+academico_paralelo ||--o{ academico_mapa : codpar
+
+' Programa
+academico_mapa ||--o{ academico_progra : (codmat,codpar,gestion)
+academico_progra ||--o{ academico_dicta : (codmat,codpar,codp,gestion)
+
+' Personas/Metadatos
+public_sys_user ||--|| academico_personal : id ↔ idusuario
+academico_personal ||--|| academico_datos : idusuario ↔ cod
+academico_personal ||--o{ academico_general : ids
+
+' Evaluación
+academico_items ||--o{ academico_itemat : codi
+academico_materia ||--o{ academico_itemat : codmat
+academico_progra ||--o{ academico_notas : (codmat,coda/codpar,codp,gestion)
+academico_items ||--o{ academico_notas : codi
+academico_personal ||--o{ academico_notas : idusuario
+academico_dmodalidad ||--o{ academico_notas : coddm
+
+@enduml

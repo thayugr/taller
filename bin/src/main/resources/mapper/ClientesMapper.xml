@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="taller1.grupo.vueadmin.system.mapper.ClientesMapper">
+    <resultMap id="clientesResult" type="taller1.grupo.vueadmin.system.entity.dto.ClientesDto">
+<result column="id" property="id" jdbcType="BIGINT"></result>
+<result column="Compañía" property="compania" jdbcType="VARCHAR"></result>
+<result column="Apellidos" property="apellidos" jdbcType="VARCHAR"></result>
+<result column="Nombre" property="nombre" jdbcType="VARCHAR"></result>
+
+  </resultMap>
+
+     <select id="queryClientesTable" resultMap="clientesResult">
+        SELECT t1."Id", t1."Compañía", 
+        t1."Apellidos", t1."Nombre"
+        FROM northwind."Clientes" t1
+        <where>
+            <if test="blurry != null and blurry != ''">
+                AND
+                 (t1."Compañía" = #{blurry} OR t1."apellidos" = #{blurry}
+                 OR t1."nombre" = #{blurry})
+
+            </if>
+        </where>
+    </select>
+
+</mapper>

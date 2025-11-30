@@ -1,0 +1,40 @@
+server:
+  port: '8415'
+spring:
+  sql:
+    init:
+      mode: always    # ejecutas schema.sql/data.sql siempre al arrancar
+      continue-on-error: true
+  jpa:
+    database: postgresql
+    generate-ddl: true
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    hibernate:
+      ddl-auto: none
+  datasource:
+    # platform: postgres
+    url: 'jdbc:postgresql://localhost:5432/proyecto2025'
+    username: postgres
+    password: 5432
+logging:
+  level:
+    org:
+      springframework:
+        boot:
+          autoconfigure: DEBUG
+  # Pide tiempo fuera
+  mvc:
+    async:
+      request-timeout: 5000ms
+
+#mybatis-plus
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

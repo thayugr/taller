@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="taller1.grupo.vueadmin.system.mapper.PersonalExtMapper">
+
+  <resultMap id="PersonaVOMap" type="taller1.grupo.vueadmin.system.entity.vo.PersonaVO">
+    <result column="idusuario" property="idusuario"/>
+    <result column="nombre"    property="nombre"/>
+    <result column="ap"        property="ap"/>
+    <result column="am"        property="am"/>
+    <result column="estado"    property="estado"/>
+    <result column="fnac"      property="fnac"/>
+    <result column="ecivil"    property="ecivil"/>
+    <result column="genero"    property="genero"/>
+    <result column="dir"       property="dir"/>
+    <result column="telf"      property="telf"/>
+    <result column="tipo"      property="tipo"/>
+    <result column="foto"      property="foto"/>
+    <result column="cedula"    property="cedula"/>
+  </resultMap>
+
+  <!-- Detalle por idusuario -->
+  <select id="selectPersonaByUserId" parameterType="long" resultMap="PersonaVOMap">
+    SELECT
+      p.idusuario,
+      p.nombre,
+      p.ap,
+      p.am,
+      p.estado,
+      p.fnac,
+      p.ecivil,
+      p.genero,
+      p.dir,
+      p.telf,
+      p.tipo,
+      p.foto,
+      d.cedula
+    FROM academico.personal p
+    LEFT JOIN academico.datos d ON d.cod = p.idusuario
+    WHERE p.idusuario = #{idusuario}
+  </select>
+
+  <!-- Listado paginado con filtro "blurry" (nombre/ap/am/telf/cedula) -->
+  <select id="pagePersonas" resultMap="PersonaVOMap">
+    SELECT
+      p.idusuario,
+      p.nombre,
+      p.ap,
+      p.am,
+      p.estado,
+      p.fnac,
+      p.ecivil,
+      p.genero,
+      p.dir,
+      p.telf,
+      p.tipo,
+      p.foto,
+      d.cedula
+    FROM academico.personal p
+    LEFT JOIN academico.datos d ON d.cod = p.idusuario
+    <where>
+      <if test="blurry != null and blurry != ''">
+        (
+          p.nombre ILIKE CONCAT('%', #{blurry}, '%')
+          OR p.ap  ILIKE CONCAT('%', #{blurry}, '%')
+          OR p.am  ILIKE CONCAT('%', #{blurry}, '%')
+          OR p.telf ILIKE CONCAT('%', #{blurry}, '%')
+          OR CAST(d.cedula AS TEXT) ILIKE CONCAT('%', #{blurry}, '%')
+        )
+      </if>
+    </where>
+    ORDER BY p.nombre ASC
+  </select>
+
+</mapper>

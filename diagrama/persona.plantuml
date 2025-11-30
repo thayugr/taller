@@ -1,0 +1,256 @@
+' ==========================================================
+' persona_listado_y_crud.puml
+' ER + Listado (paginado) + CRUD Persona + Mock UI + Paquetes
+' ==========================================================
+
+' -------------------------
+' DIAGRAMA ER ACTUALIZADO
+' -------------------------
+@startuml ER_Persona
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor<<table>> #FFFFFF
+  BorderColor #555555
+}
+
+package "public" {
+  class sys_user <<table>> {
+    + id : bigint [PK]
+    --
+    username : varchar
+    password : varchar
+    email    : varchar
+    ...
+  }
+}
+
+package "academico" {
+  class personal <<table>> {
+    + idusuario : bigint [PK]   ' FK a public.sys_user.id
+    --
+    nombre : varchar
+    ap     : varchar
+    am     : varchar
+    estado : smallint
+    fnac   : date
+    ecivil : varchar
+    genero : varchar
+    dir    : varchar
+    telf   : varchar
+    tipo   : varchar
+    foto   : varchar
+  }
+
+  class datos <<table>> {
+    + cod    : bigint [PK]      ' = academico.personal.idusuario
+    --
+    cedula : bigint
+  }
+}
+
+' Relaciones 1:1 según código
+sys_user  "1" ||--|| "1" personal : id = idusuario
+personal  "1" ||--|| "1" datos    : idusuario = cod
+@enduml
+
+
+' --------------------------------------------
+' SECUENCIA: LISTADO USUARIOS (PAGINADO) + JOIN
+' --------------------------------------------
+@startuml Seq_Listar_Usuarios
+actor Operador
+boundary "Vue: ListaUsuarios.vue\n(QTable paginada + acciones)" as UI
+control "Axios" as AX
+participant "UserController\n/system.controller" as CU
+participant "UserService\n/system.service" as SU
+control "UserExtMapper\n/system.mapper" as MU
+database "PostgreSQL\n(public & academico)" as DB
+
+== Abrir pantalla ==
+Operador -> UI : Abre lista de usuarios
+UI -> AX : GET /api/users?page=1&size=10&sort=username
+AX -> CU
+CU -> SU : findPage(page,size,sort)
+SU -> MU : selectUsersWithPersona(page,size,sort)
+MU -> DB : SELECT u.*, p.* FROM sys_user u\nLEFT JOIN academico.personal p ON p.idusuario=u.id\nORDER BY username LIMIT :size OFFSET :off
+DB --> MU : rows + totalCount (COUNT(*) OVER() / query separada)
+MU --> SU : Page<UserRowDTO{user + persona}}
+SU --> CU : Page JSON
+CU --> AX : 200 OK (content + total)
+AX --> UI : Render QTable (usuario + persona.nombre/ap/am)
+
+== Acciones en filas ==
+Operador -> UI : Click "Nuevo/Editar/Eliminar Persona"
+UI -> UI : Abre diálogo Persona o confirma eliminación
+@enduml
+
+
+' --------------------------------
+' SECUENCIA: CRUD PERSONA (DETALLE)
+' --------------------------------
+@startuml Seq_Add_Mod_Del_Persona
+actor Operador
+boundary "Vue: ListaUsuarios.vue + PersonaDialog.vue" as UI
+control "Axios" as AX
+participant "PersonalController\n/system.controller" as C
+participant "PersonalService\n/system.service" as S
+control "PersonalMapper/Ext\n/system.mapper" as M
+database "PostgreSQL\n(public & academico)" as DB
+
+== Precondición ==
+Operador -> UI : Selecciona un usuario (sys_user.id)
+
+== Adicionar / Modificar ==
+Operador -> UI : Click "Adicionar/Modificar Persona"
+UI -> AX : GET /api/personal/{idusuario}   (precarga opcional)
+AX -> C
+C -> S : getByUserId(id)
+S -> M : selectPersonaByUserId(id)
+M -> DB : SELECT JOIN personal+datos
+DB --> M : row/null
+M --> S : PersonaVO
+S --> C : PersonaVO
+C --> AX : 200 OK
+AX --> UI : datos para el diálogo
+
+Operador -> UI : Completa formulario y pulsa Guardar
+opt Crear
+  UI -> AX : POST /api/personal { idusuario,..., cedula }
+  AX -> C
+  C -> S : create(dto)
+  S -> M : SELECT sys_user BY id
+  M -> DB : SELECT ...
+  DB --> M : ok
+  S -> M : INSERT personal
+  M -> DB : INSERT ...
+  DB --> M : ok
+  alt cedula presente
+    S -> M : INSERT/UPDATE datos
+    M -> DB : INSERT/UPDATE ...
+    DB --> M : ok
+  end
+  S -> M : selectPersonaByUserId(id)
+  M -> DB : SELECT JOIN ...
+  DB --> M : row
+  M --> S : PersonaVO
+  S --> C : 201 Created
+  C --> AX : 201
+  AX --> UI : notify OK
+end
+
+opt Modificar
+  UI -> AX : PUT /api/personal/{idusuario} { ... }
+  AX -> C
+  C -> S : update(id, dto)
+  S -> M : SELECT personal BY id
+  M -> DB : SELECT ...
+  DB --> M : row
+  S -> M : UPDATE personal
+  M -> DB : UPDATE ...
+  DB --> M : ok
+  alt cedula presente
+    S -> M : INSERT/UPDATE datos
+    M -> DB : INSERT/UPDATE ...
+    DB --> M : ok
+  end
+  S -> M : selectPersonaByUserId(id)
+  M -> DB : SELECT JOIN ...
+  DB --> M : row
+  M --> S : PersonaVO
+  S --> C : 200 OK
+  C --> AX : 200
+  AX --> UI : notify OK
+end
+
+== Eliminar ==
+Operador -> UI : Click "Eliminar Persona"
+UI -> AX : DELETE /api/personal/{idusuario}
+AX -> C
+C -> S : delete(id)
+S -> M : DELETE FROM datos WHERE cod=id
+M -> DB : DELETE ...
+DB --> M : ok
+S -> M : DELETE FROM personal WHERE idusuario=id
+M -> DB : DELETE ...
+DB --> M : ok
+S --> C : 204
+C --> AX : 204
+AX --> UI : notify OK
+@enduml
+
+
+' ---------------------------
+' MOCKS DE PANTALLA (SALT UI)
+' ---------------------------
+@startsalt Mock_Listado_Usuarios
+{+
+  "Listado de Usuarios (sys_user) + Persona (academico.personal)"
+  [ Buscar: ____________ ] [ (Buscar) ]
+  [ Pág.: [ 1 ]  de  [ 20 ]   |  Tamaño: [ 10 |▼] ]
+  {#-
+    | ID | Usuario | Email         | Persona.Nombre | Persona.Ap | Acciones |
+    |  1 | jperez  | jp@dom.com    | Juan           | Perez      | [ Nuevo ] [ Editar ] [ Eliminar ] |
+    |  2 | mmendez | mm@dom.com    | (no asignado)  |            | [ Nuevo ] [ Editar ] [ Eliminar ] |
+    | .. | ...     | ...           | ...            | ...        | ... |
+  -#}
+}
+@endsalt
+
+@startsalt Mock_Form_Persona
+{+
+  "Nueva/Editar Persona (academico.personal + academico.datos)"
+  [ idusuario*       | ____________ (no editable) ]
+  [ nombre*          | ____________ ]
+  [ ap               | ____________ ]
+  [ am               | ____________ ]
+  [ fnac (yyyy-mm-dd)| ____________ ]
+  [ genero           | ( ) M  ( ) F ]
+  [ ecivil           | [ soltero |▼] ]
+  [ dir              | ___________________________ ]
+  [ telf             | ____________ ]
+  [ tipo             | [ docente |▼] ]
+  [ foto (url)       | ___________________________ ]
+  [ cedula (datos)   | ____________ ]
+  {  [ Cancelar ] | [ Guardar ]  }
+}
+@endsalt
+
+
+' --------------------------------
+' DIAGRAMA DE PAQUETES (BACKEND)
+' --------------------------------
+@startuml Pkg_Backend
+package "taller1.grupo.vueadmin" {
+  package common {
+    package exception
+    package utils
+    package constant
+  }
+  package config
+  package logs
+  package system {
+    package controller
+    package service
+    package "service.impl" as service_impl
+    package mapper
+    package entity
+  }
+  package constant
+  package common
+}
+system.controller --> system.service
+system.service --> service_impl
+service_impl --> system.mapper
+system.mapper --> system.entity
+system.controller --> common.utils
+system.controller --> common.constant
+logs ..> system.controller
+logs ..> system.mapper
+config ..> system.controller
+config ..> system.mapper
+config ..> common.utils
+database "PostgreSQL" as DB
+system.mapper --> DB
+@enduml
